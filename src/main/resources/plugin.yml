@@ -1,0 +1,6 @@
+name: Rewards
+version: '${project.version}'
+main: rewards.rewards.Rewards
+api-version: 1.19
+authors: [ Hiroyuki ]
+description: add reward functions
