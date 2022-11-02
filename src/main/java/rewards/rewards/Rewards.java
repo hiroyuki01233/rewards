@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
@@ -23,8 +24,12 @@ public final class Rewards extends JavaPlugin implements Listener {
     public static HashMap<Player, Integer> playerJumpCounts = new HashMap<>();
     public static HashMap<Player, BossBar> playerJumpBossBars = new HashMap<>();
 
-    static String winner = "d8277aca-a431-4112-b9b6-3c08a782d9a2";
-    ArrayList<String> participants = new ArrayList<>(Arrays.asList("",""));
+    public static HashMap<Player, Boolean> playerEnableList = new HashMap<>();
+    public static HashMap<Player, Integer> playerEnableTime = new HashMap<>();
+    public static ArrayList<Player> timePlayers = new ArrayList<>();
+
+    static String winner = "b3a36f9a-2845-41ca-9761-7945e8f272a7";
+    ArrayList<String> participants = new ArrayList<>(Arrays.asList("d8277aca-a431-4112-b9b6-3c08a782d9a2","1a8197c5-23e8-462b-b92b-8e2014de0a53"));
 
     @Override
     public void onEnable() {
@@ -46,6 +51,7 @@ public final class Rewards extends JavaPlugin implements Listener {
         if (p.isSneaking() && event.getAction() == Action.LEFT_CLICK_AIR){
             if (!playerJumpCounts.containsKey(p) || !playerJumpBossBars.containsKey(p)) return;
             if (!participants.contains(p.getUniqueId().toString()) && !winner.equals(p.getUniqueId().toString())) return;
+            if (playerEnableList.containsKey(p) && playerEnableList.get(p)) return;
 
             if (playerJumpCounts.get(p) == 0){
                 p.damage(0.1);
@@ -72,4 +78,28 @@ public final class Rewards extends JavaPlugin implements Listener {
             playerJumpBossBars.get(p).setVisible(true);
         }
     }
+
+    @EventHandler
+    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        Player p = event.getPlayer();
+        if (!participants.contains(p.getUniqueId().toString()) && !winner.equals(p.getUniqueId().toString())) return;
+        if (!playerEnableList.containsKey(p)) playerEnableList.put(p, true);
+
+        if (playerEnableTime.containsKey(p)){
+            if (playerEnableTime.get(p) == 8){
+                Boolean now = playerEnableList.get(p);
+                p.sendMessage(":Multiple Jump has been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+now);
+                playerEnableList.replace(p, !now);
+                playerEnableTime.replace(p, 1);
+            }else{
+                playerEnableTime.replace(p,playerEnableTime.get(p)+1);
+            }
+        } else{
+            playerEnableTime.put(p, 1);
+            timePlayers.add(p);
+            new SwichTimeManager().runTaskTimer(this, 0L, 20L);
+        }
+
+    }
+
 }
