@@ -18,7 +18,7 @@ public class TimeManager extends BukkitRunnable {
         HashMap<Player, Integer> playerJumpCounts = Rewards.playerJumpCounts;
         HashMap<Player, BossBar> playerJumpBossBars = Rewards.playerJumpBossBars;
 
-        String winner = Rewards.winner;
+        String winner = Rewards.winnerJump;
 
         for (Player p : Bukkit.getOnlinePlayers()){
             if (!playerJumpBossBars.containsKey(p)){

@@ -3,20 +3,19 @@ package rewards.rewards;
 import org.bukkit.ChatColor;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 public final class Rewards extends JavaPlugin implements Listener {
 
@@ -28,8 +27,10 @@ public final class Rewards extends JavaPlugin implements Listener {
     public static HashMap<Player, Integer> playerEnableTime = new HashMap<>();
     public static ArrayList<Player> timePlayers = new ArrayList<>();
 
-    static String winner = "b3a36f9a-2845-41ca-9761-7945e8f272a7";
-    ArrayList<String> participants = new ArrayList<>(Arrays.asList("d8277aca-a431-4112-b9b6-3c08a782d9a2","1a8197c5-23e8-462b-b92b-8e2014de0a53"));
+    static String winnerJump = "d8277aca-a431-4112-b9b6-3c08a782d9a2";
+    ArrayList<String> participantsJump = new ArrayList<>(Collections.singletonList(""));
+    ArrayList<String> woodcutterPlayers = new ArrayList<>(Collections.singletonList("d8277aca-a431-4112-b9b6-3c08a782d9a2"));
+    ArrayList<String> digPlayers = new ArrayList<>(Collections.singletonList("d8277aca-a431-4112-b9b6-3c08a782d9a2"));
 
     @Override
     public void onEnable() {
@@ -48,10 +49,10 @@ public final class Rewards extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player p = event.getPlayer();
+        if (!playerEnableList.containsKey(p) || !playerEnableList.get(p)) return;
         if (p.isSneaking() && event.getAction() == Action.LEFT_CLICK_AIR){
             if (!playerJumpCounts.containsKey(p) || !playerJumpBossBars.containsKey(p)) return;
-            if (!participants.contains(p.getUniqueId().toString()) && !winner.equals(p.getUniqueId().toString())) return;
-            if (playerEnableList.containsKey(p) && playerEnableList.get(p)) return;
+            if (!participantsJump.contains(p.getUniqueId().toString()) && !winnerJump.equals(p.getUniqueId().toString())) return;
 
             if (playerJumpCounts.get(p) == 0){
                 p.damage(0.1);
@@ -68,7 +69,7 @@ public final class Rewards extends JavaPlugin implements Listener {
 
             double amount = 1.0;
 
-            if (p.getUniqueId().toString().equals(winner)){
+            if (p.getUniqueId().toString().equals(winnerJump)){
                 amount = 3.0;
             }
 
@@ -82,13 +83,13 @@ public final class Rewards extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
         Player p = event.getPlayer();
-        if (!participants.contains(p.getUniqueId().toString()) && !winner.equals(p.getUniqueId().toString())) return;
+        if (!(participantsJump.contains(p.getUniqueId().toString()) || winnerJump.equals(p.getUniqueId().toString()) || woodcutterPlayers.contains(p.getUniqueId().toString()))) return;
         if (!playerEnableList.containsKey(p)) playerEnableList.put(p, true);
 
         if (playerEnableTime.containsKey(p)){
             if (playerEnableTime.get(p) == 8){
                 Boolean now = playerEnableList.get(p);
-                p.sendMessage(":Multiple Jump has been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+now);
+                p.sendMessage(":Your rewards functions have been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+!now);
                 playerEnableList.replace(p, !now);
                 playerEnableTime.replace(p, 1);
             }else{
@@ -100,6 +101,74 @@ public final class Rewards extends JavaPlugin implements Listener {
             new SwichTimeManager().runTaskTimer(this, 0L, 20L);
         }
 
+    }
+
+
+    public boolean judgeExists(ArrayList<Block> blocks, ArrayList<Block> blocks2, Block b){
+        for (Block block : blocks) {
+            if (block.equals(b)) {
+                return true;
+            }
+        }
+        for (Block block : blocks2) {
+            if (block.equals(b)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ArrayList<Block> searchAroundBlock(Block b){
+        ArrayList<Block> searchList = new ArrayList<>();
+        ArrayList<Block> result = new ArrayList<>();
+        searchList.add(b);
+
+        for (int i = 0; i < 15; i++){
+            if (searchList.size() == 0) break;
+            Block originBlock = searchList.get(0);
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)));
+            result.add(originBlock);
+            searchList.remove(0);
+        }
+
+        return result;
+    }
+
+    @EventHandler
+    public void onBreak(BlockBreakEvent e){
+        Player p = e.getPlayer();
+        if (!playerEnableList.containsKey(p) || !playerEnableList.get(p)) return;
+
+        if (woodcutterPlayers.contains(p.getUniqueId().toString()) &&e.getBlock().getType().toString().contains("_LOG") && p.getInventory().getItemInMainHand().getType().toString().contains("_AXE")){
+            ArrayList<Block> blocks =  searchAroundBlock(e.getBlock());
+            for (Block block : blocks) {
+                block.breakNaturally(p.getInventory().getItemInMainHand());
+            }
+        }else if (digPlayers.contains(p.getUniqueId().toString()) && p.getInventory().getItemInMainHand().getType().toString().contains("_PICKAXE")){
+            int[][] arr = {{0,0}, {1,0},{-1,0},{0,1},{1,1},{-1,1},{0,-1},{1,-1},{-1,-1}};
+            if (p.getLocation().getDirection().getY() < -0.5){
+                for (int i = -1; i < 2; i++){
+                    for (int ii = -1; ii < 2; ii++){
+                        Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(i,0,ii));
+                        breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
+                    }
+                }
+            }else if (p.getLocation().getDirection().getX() < 0.5 && p.getLocation().getDirection().getX() > -0.5){
+                for (int[] loc : arr){
+                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(loc[0],loc[1],0));
+                    breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
+                }
+            }else {
+                for (int[] loc : arr){
+                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(0,loc[1],loc[0]));
+                    breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
+                }
+            }
+        }
     }
 
 }
