@@ -5,6 +5,9 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,6 +18,8 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public final class Rewards extends JavaPlugin implements Listener {
@@ -30,7 +35,10 @@ public final class Rewards extends JavaPlugin implements Listener {
     static String winnerJump = "d8277aca-a431-4112-b9b6-3c08a782d9a2";
     ArrayList<String> participantsJump = new ArrayList<>(Collections.singletonList(""));
     ArrayList<String> woodcutterPlayers = new ArrayList<>(Collections.singletonList("d8277aca-a431-4112-b9b6-3c08a782d9a2"));
-    ArrayList<String> digPlayers = new ArrayList<>(Collections.singletonList("d8277aca-a431-4112-b9b6-3c08a782d9a2"));
+    ArrayList<String> digPlayers = new ArrayList<>(Arrays.asList("d8277aca-a431-4112-b9b6-3c08a782d9a2","aada9a01-2bca-4abe-b940-08da0102370e"));
+
+    private File customConfigFile;
+    private FileConfiguration customConfig;
 
     @Override
     public void onEnable() {
@@ -38,11 +46,35 @@ public final class Rewards extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("rewards started");
         new TimeManager().runTaskTimer(this, 0L, 40L);
+        createCustomConfig();
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+    }
+
+    public FileConfiguration getCustomConfig() {
+        return this.customConfig;
+    }
+
+    private void createCustomConfig() {
+        customConfigFile = new File(getDataFolder(), "custom.yml");
+        if (!customConfigFile.exists()) {
+            customConfigFile.getParentFile().mkdirs();
+            saveResource("custom.yml", false);
+        }
+
+        customConfig = new YamlConfiguration();
+        try {
+            customConfig.load(customConfigFile);
+        } catch (IOException | InvalidConfigurationException e) {
+            e.printStackTrace();
+        }
+        /* User Edit:
+            Instead of the above Try/Catch, you can also use
+            YamlConfiguration.loadConfiguration(customConfigFile)
+        */
     }
 
 
@@ -83,13 +115,13 @@ public final class Rewards extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
         Player p = event.getPlayer();
-        if (!(participantsJump.contains(p.getUniqueId().toString()) || winnerJump.equals(p.getUniqueId().toString()) || woodcutterPlayers.contains(p.getUniqueId().toString()))) return;
+        if (!(participantsJump.contains(p.getUniqueId().toString()) || winnerJump.equals(p.getUniqueId().toString()) || woodcutterPlayers.contains(p.getUniqueId().toString()) || digPlayers.contains(p.getUniqueId().toString()))) return;
         if (!playerEnableList.containsKey(p)) playerEnableList.put(p, true);
 
         if (playerEnableTime.containsKey(p)){
             if (playerEnableTime.get(p) == 8){
                 Boolean now = playerEnableList.get(p);
-                p.sendMessage(":Your rewards functions have been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+!now);
+                p.sendMessage(":Your reward functions have been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+!now);
                 playerEnableList.replace(p, !now);
                 playerEnableTime.replace(p, 1);
             }else{
