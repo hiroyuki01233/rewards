@@ -59,10 +59,10 @@ public final class Rewards extends JavaPlugin implements Listener {
     }
 
     private void createCustomConfig() {
-        customConfigFile = new File(getDataFolder(), "custom.yml");
+        customConfigFile = new File(getDataFolder(), "config.yml");
         if (!customConfigFile.exists()) {
             customConfigFile.getParentFile().mkdirs();
-            saveResource("custom.yml", false);
+            saveResource("config.yml", false);
         }
 
         customConfig = new YamlConfiguration();
