@@ -4,3 +4,8 @@ main: rewards.rewards.Rewards
 api-version: 1.19
 authors: [ Hiroyuki ]
 description: add reward functions
+
+commands:
+  rewards:
+    description: tools for manage land or etc.
+    usage: /<command>

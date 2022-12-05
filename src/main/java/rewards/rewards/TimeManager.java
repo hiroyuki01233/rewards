@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
+import java.util.List;
 
 public class TimeManager extends BukkitRunnable {
 
@@ -18,14 +19,16 @@ public class TimeManager extends BukkitRunnable {
         HashMap<Player, Integer> playerJumpCounts = Rewards.playerJumpCounts;
         HashMap<Player, BossBar> playerJumpBossBars = Rewards.playerJumpBossBars;
 
-        String winner = Rewards.winnerJump;
+        List<String> jumpGreatPlayers = Rewards.jumpGreatPlayers;
+        int jumpCountNormal = Rewards.jumpCountNormal;
+        int jumpCountGreat = Rewards.jumpCountGreat;
 
         for (Player p : Bukkit.getOnlinePlayers()){
             if (!playerJumpBossBars.containsKey(p)){
-                int amount = 1;
+                int amount = jumpCountNormal;
 
-                if (p.getUniqueId().toString().equals(winner)){
-                    amount = 3;
+                if (jumpGreatPlayers.contains(p.getUniqueId().toString())){
+                    amount = jumpCountGreat;
                 }
                 BossBar bar = Bukkit.createBossBar(ChatColor.YELLOW+"ジャンプ可能回数 : "+ChatColor.AQUA+amount, BarColor.BLUE, BarStyle.SEGMENTED_20);
                 bar.setProgress(1f);
@@ -37,10 +40,10 @@ public class TimeManager extends BukkitRunnable {
         }
 
         for (Player p : playerJumpCounts.keySet()){
-            double amount = 1.0;
+            double amount = jumpCountNormal;
 
-            if (p.getUniqueId().toString().equals(winner)){
-                amount = 3.0;
+            if (jumpGreatPlayers.contains(p.getUniqueId().toString())){
+                amount = jumpCountGreat;
             }
 
             if (playerJumpCounts.get(p) != (int) amount){

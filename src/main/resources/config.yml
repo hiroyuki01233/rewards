@@ -1,1 +1,22 @@
-test: True
+jump:
+  jump_count_normal: 1
+  jump_count_great: 3
+  jump_power_normal: 1
+  jump_power_great: 1
+  jump_normal_players:
+    - "player-UUID"
+    - "player-UUID"
+  jump_great_players:
+    - "player-UUID"
+    - "player-UUID"
+
+break:
+  break_players:
+    - "player-UUID"
+    - "player-UUID"
+
+break_tree:
+  break_tree_players:
+    - "player-UUID"
+    - "player-UUID"
+  break_tree_max: 30

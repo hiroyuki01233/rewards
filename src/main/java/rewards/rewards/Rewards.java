@@ -5,6 +5,8 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,10 +19,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Supplier;
 
 public final class Rewards extends JavaPlugin implements Listener {
 
@@ -32,21 +36,25 @@ public final class Rewards extends JavaPlugin implements Listener {
     public static HashMap<Player, Integer> playerEnableTime = new HashMap<>();
     public static ArrayList<Player> timePlayers = new ArrayList<>();
 
-    static String winnerJump = "d8277aca-a431-4112-b9b6-3c08a782d9a2";
-    ArrayList<String> participantsJump = new ArrayList<>(Collections.singletonList(""));
-    ArrayList<String> woodcutterPlayers = new ArrayList<>(Collections.singletonList("d8277aca-a431-4112-b9b6-3c08a782d9a2"));
-    ArrayList<String> digPlayers = new ArrayList<>(Arrays.asList("d8277aca-a431-4112-b9b6-3c08a782d9a2","aada9a01-2bca-4abe-b940-08da0102370e"));
+    private File configFile;
+    private FileConfiguration config;
 
-    private File customConfigFile;
-    private FileConfiguration customConfig;
+    static int jumpCountNormal;
+    static int jumpCountGreat;
+    private List<String> jumpNormalPlayers;
+    static List<String> jumpGreatPlayers;
+    private List<String> breakPlayers;
+    private List<String> breakTreePlayers;
+
+    private int breakTreeMax;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("rewards started");
         new TimeManager().runTaskTimer(this, 0L, 40L);
-        createCustomConfig();
+        setAllConfig();
+        getLogger().info("rewards started");
     }
 
     @Override
@@ -55,26 +63,37 @@ public final class Rewards extends JavaPlugin implements Listener {
     }
 
     public FileConfiguration getCustomConfig() {
-        return this.customConfig;
+        return this.config;
+    }
+
+    public void setAllConfig() {
+        createCustomConfig();
+        setConfig();
+    }
+
+    public void setConfig() {
+        jumpCountNormal = config.getInt("jump.jump_count_normal");
+        jumpCountGreat = config.getInt("jump.jump_count_great");
+        jumpNormalPlayers = config.getStringList("jump.jump_normal_players");
+        jumpGreatPlayers = config.getStringList("jump.jump_great_players");
+        breakPlayers = config.getStringList("break.break_players");
+        breakTreePlayers = config.getStringList("break_tree.break_tree_players");
+        breakTreeMax = config.getInt("break_tree.break_tree_max");
     }
 
     private void createCustomConfig() {
-        customConfigFile = new File(getDataFolder(), "config.yml");
-        if (!customConfigFile.exists()) {
-            customConfigFile.getParentFile().mkdirs();
+        configFile = new File(getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            configFile.getParentFile().mkdirs();
             saveResource("config.yml", false);
         }
 
-        customConfig = new YamlConfiguration();
+        config = new YamlConfiguration();
         try {
-            customConfig.load(customConfigFile);
+            config.load(configFile);
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
-        /* User Edit:
-            Instead of the above Try/Catch, you can also use
-            YamlConfiguration.loadConfiguration(customConfigFile)
-        */
     }
 
 
@@ -82,11 +101,12 @@ public final class Rewards extends JavaPlugin implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player p = event.getPlayer();
         if (!playerEnableList.containsKey(p) || !playerEnableList.get(p)) return;
-        if (p.isSneaking() && event.getAction() == Action.LEFT_CLICK_AIR){
+        if (p.isSneaking() && event.getAction() == Action.LEFT_CLICK_AIR) {
             if (!playerJumpCounts.containsKey(p) || !playerJumpBossBars.containsKey(p)) return;
-            if (!participantsJump.contains(p.getUniqueId().toString()) && !winnerJump.equals(p.getUniqueId().toString())) return;
+            if (!jumpNormalPlayers.contains(p.getUniqueId().toString()) && !jumpGreatPlayers.contains(p.getUniqueId().toString()))
+                return;
 
-            if (playerJumpCounts.get(p) == 0){
+            if (playerJumpCounts.get(p) == 0) {
                 p.damage(0.1);
                 return;
             }
@@ -95,18 +115,18 @@ public final class Rewards extends JavaPlugin implements Listener {
             double y = p.getLocation().getDirection().getY();
             double z = p.getLocation().getDirection().getZ();
 
-            p.setVelocity(new Vector(x,y,z));
-            p.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, p.getLocation(),1);
-            p.getWorld().playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 0.3f,1f);
+            p.setVelocity(new Vector(x, y, z));
+            p.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, p.getLocation(), 1);
+            p.getWorld().playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 0.3f, 1f);
 
-            double amount = 1.0;
+            double amount = jumpCountNormal;
 
-            if (p.getUniqueId().toString().equals(winnerJump)){
-                amount = 3.0;
+            if (jumpGreatPlayers.contains(p.getUniqueId().toString())) {
+                amount = jumpCountGreat;
             }
 
             playerJumpCounts.replace(p, playerJumpCounts.get(p) - 1);
-            playerJumpBossBars.get(p).setTitle(ChatColor.YELLOW+"ジャンプ可能回数 : "+ChatColor.AQUA+playerJumpCounts.get(p));
+            playerJumpBossBars.get(p).setTitle(ChatColor.YELLOW + "ジャンプ可能回数 : " + ChatColor.AQUA + playerJumpCounts.get(p));
             playerJumpBossBars.get(p).setProgress(playerJumpCounts.get(p) / amount);
             playerJumpBossBars.get(p).setVisible(true);
         }
@@ -115,19 +135,20 @@ public final class Rewards extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
         Player p = event.getPlayer();
-        if (!(participantsJump.contains(p.getUniqueId().toString()) || winnerJump.equals(p.getUniqueId().toString()) || woodcutterPlayers.contains(p.getUniqueId().toString()) || digPlayers.contains(p.getUniqueId().toString()))) return;
+        if (!(jumpNormalPlayers.contains(p.getUniqueId().toString()) || jumpGreatPlayers.contains(p.getUniqueId().toString()) || breakPlayers.contains(p.getUniqueId().toString()) || breakTreePlayers.contains(p.getUniqueId().toString())))
+            return;
         if (!playerEnableList.containsKey(p)) playerEnableList.put(p, true);
 
-        if (playerEnableTime.containsKey(p)){
-            if (playerEnableTime.get(p) == 8){
+        if (playerEnableTime.containsKey(p)) {
+            if (playerEnableTime.get(p) == 8) {
                 Boolean now = playerEnableList.get(p);
-                p.sendMessage(":Your reward functions have been changed to "+(now ? ChatColor.BLUE : ChatColor.RED)+!now);
+                p.sendMessage(":Your reward functions have been changed to " + (now ? ChatColor.BLUE : ChatColor.RED) + !now);
                 playerEnableList.replace(p, !now);
                 playerEnableTime.replace(p, 1);
-            }else{
-                playerEnableTime.replace(p,playerEnableTime.get(p)+1);
+            } else {
+                playerEnableTime.replace(p, playerEnableTime.get(p) + 1);
             }
-        } else{
+        } else {
             playerEnableTime.put(p, 1);
             timePlayers.add(p);
             new SwichTimeManager().runTaskTimer(this, 0L, 20L);
@@ -136,7 +157,7 @@ public final class Rewards extends JavaPlugin implements Listener {
     }
 
 
-    public boolean judgeExists(ArrayList<Block> blocks, ArrayList<Block> blocks2, Block b){
+    public boolean judgeExists(ArrayList<Block> blocks, ArrayList<Block> blocks2, Block b) {
         for (Block block : blocks) {
             if (block.equals(b)) {
                 return true;
@@ -150,19 +171,24 @@ public final class Rewards extends JavaPlugin implements Listener {
         return false;
     }
 
-    public ArrayList<Block> searchAroundBlock(Block b){
+    public ArrayList<Block> searchAroundBlock(Block b) {
         ArrayList<Block> searchList = new ArrayList<>();
         ArrayList<Block> result = new ArrayList<>();
         searchList.add(b);
 
-        for (int i = 0; i < 15; i++){
+        for (int i = 0; i < breakTreeMax; i++) {
             if (searchList.size() == 0) break;
             Block originBlock = searchList.get(0);
-            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,1,0)));
-            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1,0,0)));
-            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1,0,0)));
-            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,1)));
-            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)))) searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0,0,-1)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 1, 0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 1, 0))))
+                searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 1, 0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1, 0, 0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1, 0, 0))))
+                searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(1, 0, 0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1, 0, 0)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1, 0, 0))))
+                searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(-1, 0, 0)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, 1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, 1))))
+                searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, 1)));
+            if (originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, -1)).getType().equals(originBlock.getType()) && !judgeExists(result, searchList, originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, -1))))
+                searchList.add(originBlock.getWorld().getBlockAt(originBlock.getLocation().add(0, 0, -1)));
             result.add(originBlock);
             searchList.remove(0);
         }
@@ -171,36 +197,52 @@ public final class Rewards extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onBreak(BlockBreakEvent e){
+    public void onBreak(BlockBreakEvent e) {
         Player p = e.getPlayer();
         if (!playerEnableList.containsKey(p) || !playerEnableList.get(p)) return;
 
-        if (woodcutterPlayers.contains(p.getUniqueId().toString()) &&e.getBlock().getType().toString().contains("_LOG") && p.getInventory().getItemInMainHand().getType().toString().contains("_AXE")){
-            ArrayList<Block> blocks =  searchAroundBlock(e.getBlock());
+        if (breakPlayers.contains(p.getUniqueId().toString()) && e.getBlock().getType().toString().contains("_LOG") && p.getInventory().getItemInMainHand().getType().toString().contains("_AXE")) {
+            ArrayList<Block> blocks = searchAroundBlock(e.getBlock());
             for (Block block : blocks) {
                 block.breakNaturally(p.getInventory().getItemInMainHand());
             }
-        }else if (digPlayers.contains(p.getUniqueId().toString()) && p.getInventory().getItemInMainHand().getType().toString().contains("_PICKAXE")){
-            int[][] arr = {{0,0}, {1,0},{-1,0},{0,1},{1,1},{-1,1},{0,-1},{1,-1},{-1,-1}};
-            if (p.getLocation().getDirection().getY() < -0.5){
-                for (int i = -1; i < 2; i++){
-                    for (int ii = -1; ii < 2; ii++){
-                        Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(i,0,ii));
+        } else if (breakTreePlayers.contains(p.getUniqueId().toString()) && p.getInventory().getItemInMainHand().getType().toString().contains("_PICKAXE")) {
+            int[][] arr = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {1, 1}, {-1, 1}, {0, -1}, {1, -1}, {-1, -1}};
+            if (p.getLocation().getDirection().getY() < -0.5) {
+                for (int i = -1; i < 2; i++) {
+                    for (int ii = -1; ii < 2; ii++) {
+                        Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(i, 0, ii));
                         breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
                     }
                 }
-            }else if (p.getLocation().getDirection().getX() < 0.5 && p.getLocation().getDirection().getX() > -0.5){
-                for (int[] loc : arr){
-                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(loc[0],loc[1],0));
+            } else if (p.getLocation().getDirection().getX() < 0.5 && p.getLocation().getDirection().getX() > -0.5) {
+                for (int[] loc : arr) {
+                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(loc[0], loc[1], 0));
                     breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
                 }
-            }else {
-                for (int[] loc : arr){
-                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(0,loc[1],loc[0]));
+            } else {
+                for (int[] loc : arr) {
+                    Block breakBlock = e.getBlock().getWorld().getBlockAt(e.getBlock().getLocation().add(0, loc[1], loc[0]));
                     breakBlock.breakNaturally(p.getInventory().getItemInMainHand());
                 }
             }
         }
     }
 
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (sender instanceof Player) {
+            Player p = (Player) sender;
+
+            if (args[0].equals("reload")){
+                setAllConfig();
+                for (Player player : playerJumpCounts.keySet()){
+                    playerJumpBossBars.get(player).removeAll();
+                }
+                playerJumpCounts.clear();
+                playerJumpBossBars.clear();
+            }
+        }
+        return true;
+    }
 }
