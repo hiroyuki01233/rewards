@@ -365,6 +365,10 @@ public final class Rewards extends JavaPlugin implements Listener {
                         return Collections.singletonList("normal");
                     }
                 }
+            }else if(args[0].equals("break")){
+                return playerNames;
+            }else if(args[0].equals("breakTree")){
+                return Arrays.asList("add","set");
             }
         }
 
@@ -374,6 +378,12 @@ public final class Rewards extends JavaPlugin implements Listener {
                     return Arrays.asList("{count}","add","remove");
                 } else {
                     return playerNames;
+                }
+            }else if (args[0].equals("breakTree")){
+                if (args[1].equals("add")){
+                    return playerNames;
+                }else{
+                    return Collections.singletonList("{max block}");
                 }
             }
         }
