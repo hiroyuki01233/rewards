@@ -1,8 +1,6 @@
 package rewards.rewards;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
@@ -229,20 +227,164 @@ public final class Rewards extends JavaPlugin implements Listener {
         }
     }
 
+    public OfflinePlayer getPlayer(String name){
+        OfflinePlayer player = Arrays.stream(Bukkit.getOfflinePlayers())
+                .filter(offlinePlayer -> name.equals(offlinePlayer.getName()))
+                .findFirst()
+                .orElse(null);
+        return player;
+    }
+
+    public void jumpReload(){
+        for (Player player : playerJumpCounts.keySet()){
+            playerJumpBossBars.get(player).removeAll();
+        }
+        playerJumpCounts.clear();
+        playerJumpBossBars.clear();
+    }
+
+    public static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+        } catch(NumberFormatException | NullPointerException e) {
+            return false;
+        }
+        // only got here if we didn't return false
+        return true;
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (sender instanceof Player) {
             Player p = (Player) sender;
 
+            if (args[0].equals("test")){
+            }
+
             if (args[0].equals("reload")){
                 setAllConfig();
-                for (Player player : playerJumpCounts.keySet()){
-                    playerJumpBossBars.get(player).removeAll();
+                jumpReload();
+
+            }else if(args[0].equals("jump")){
+                String type = args[1];
+                if (Arrays.asList("add","remove").contains(args[2])){
+                    List<String> jumpPlayers = "normal".equals(type) ? jumpNormalPlayers : jumpGreatPlayers;
+                    if (args[2].equals("add")){
+                        OfflinePlayer player = getPlayer(args[3]);
+                        if (Objects.nonNull(player)){
+                            if (jumpPlayers.contains(player.getUniqueId().toString())){
+                                p.sendMessage("player exists already");
+                            }else{
+                                jumpPlayers.add(player.getUniqueId().toString());
+                                config.set("jump.jump_"+type+"_players", jumpPlayers);
+                                try {
+                                    config.save(configFile);
+                                    setAllConfig();
+                                    jumpReload();
+                                    p.sendMessage("player has been added");
+                                } catch (IOException e) {
+                                    p.sendMessage("something wrong");
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        }else{
+                            p.sendMessage("nothing user");
+                        }
+                    }else if(args[2].equals("remove")){
+                        OfflinePlayer player = getPlayer(args[3]);
+                        if (Objects.nonNull(player) && jumpPlayers.contains(player.getUniqueId().toString())){
+                            jumpPlayers.remove(player.getUniqueId().toString());
+                            config.set("jump.jump_"+type+"_players", jumpPlayers);
+                            try {
+                                config.save(configFile);
+                                setAllConfig();
+                                jumpReload();
+                                p.sendMessage("remove complete");
+                            } catch (IOException e) {
+                                p.sendMessage("something wrong");
+                                throw new RuntimeException(e);
+                            }
+                        }else{
+                            p.sendMessage("nothing user");
+                        }
+                    }
+                }else{
+                    if (!isInteger(args[2])){
+                        p.sendMessage("invalid arg");
+                        return true;
+                    }
+                    config.set("jump.jump_count_"+type, Integer.parseInt(args[2]));
+                    try {
+                        config.save(configFile);
+                        setAllConfig();
+                        jumpReload();
+                        p.sendMessage("count has been set");
+                    } catch (IOException e) {
+                        p.sendMessage("something wrong");
+                        throw new RuntimeException(e);
+                    }
                 }
-                playerJumpCounts.clear();
-                playerJumpBossBars.clear();
             }
         }
         return true;
     }
+
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender sender, Command command, @NotNull String alias, @NotNull String[] args) {
+        if (!command.getName().equalsIgnoreCase("rewards")) return super.onTabComplete(sender, command, alias, args);
+        ArrayList<String> playerNames = new ArrayList<>();
+        for (Player player : Bukkit.getServer().getOnlinePlayers()){
+            playerNames.add(player.getDisplayName());
+        }
+        playerNames.add("プレイヤー名");
+
+        if (args.length == 1) {
+            if (args[0].length() == 0) {
+                return Arrays.asList("reload","jump","break","breakTree");
+            } else {
+                if ("reload".startsWith(args[0])) {
+                    return Collections.singletonList("reload");
+                }else if("jump".startsWith(args[0])){
+                    return Collections.singletonList("jump");
+                }else if("break".startsWith(args[0])){
+                    return Collections.singletonList("break");
+                }else if("breakTree".startsWith(args[0])){
+                    return Collections.singletonList("breakTree");
+                }
+            }
+        }
+
+        if (args.length == 2){
+            if (args[0].equals("jump")){
+                if (args[1].length() == 0) {
+                    return Arrays.asList("great","normal");
+                } else {
+                    if ("great".startsWith(args[1])){
+                        return Collections.singletonList("great");
+                    }else if("normal".startsWith(args[1])){
+                        return Collections.singletonList("normal");
+                    }
+                }
+            }
+        }
+
+        if (args.length == 3){
+            if (args[0].equals("jump")){
+                if (args[2].length() == 0) {
+                    return Arrays.asList("{count}","add","remove");
+                } else {
+                    return playerNames;
+                }
+            }
+        }
+
+        if (args.length == 4){
+            if (args[0].equals("jump")){
+                return playerNames;
+            }
+        }
+
+        return null;
+    }
+
 }
