@@ -261,40 +261,94 @@ public final class Rewards extends JavaPlugin implements Listener {
             if (args[0].equals("test")){
             }
 
-            if (args[0].equals("reload")){
-                setAllConfig();
-                jumpReload();
+            if (p.isOp()) {
+                if (args[0].equals("reload")) {
+                    setAllConfig();
+                    jumpReload();
 
-            }else if(args[0].equals("jump")){
-                String type = args[1];
-                if (Arrays.asList("add","remove").contains(args[2])){
-                    List<String> jumpPlayers = "normal".equals(type) ? jumpNormalPlayers : jumpGreatPlayers;
-                    if (args[2].equals("add")){
-                        OfflinePlayer player = getPlayer(args[3]);
-                        if (Objects.nonNull(player)){
-                            if (jumpPlayers.contains(player.getUniqueId().toString())){
-                                p.sendMessage("player exists already");
-                            }else{
-                                jumpPlayers.add(player.getUniqueId().toString());
-                                config.set("jump.jump_"+type+"_players", jumpPlayers);
+                } else if (args[0].equals("jump")) {
+                    String type = args[1];
+                    if (Arrays.asList("add", "remove").contains(args[2])) {
+                        List<String> jumpPlayers = "normal".equals(type) ? jumpNormalPlayers : jumpGreatPlayers;
+                        if (args[2].equals("add")) {
+                            OfflinePlayer player = getPlayer(args[3]);
+                            if (Objects.nonNull(player)) {
+                                if (jumpPlayers.contains(player.getUniqueId().toString())) {
+                                    p.sendMessage("player exists already");
+                                } else {
+                                    jumpPlayers.add(player.getUniqueId().toString());
+                                    config.set("jump.jump_" + type + "_players", jumpPlayers);
+                                    try {
+                                        config.save(configFile);
+                                        setAllConfig();
+                                        jumpReload();
+                                        p.sendMessage("player has been added");
+                                    } catch (IOException e) {
+                                        p.sendMessage("something wrong");
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            } else {
+                                p.sendMessage("nothing user");
+                            }
+                        } else if (args[2].equals("remove")) {
+                            OfflinePlayer player = getPlayer(args[3]);
+                            if (Objects.nonNull(player) && jumpPlayers.contains(player.getUniqueId().toString())) {
+                                jumpPlayers.remove(player.getUniqueId().toString());
+                                config.set("jump.jump_" + type + "_players", jumpPlayers);
                                 try {
                                     config.save(configFile);
                                     setAllConfig();
                                     jumpReload();
+                                    p.sendMessage("remove complete");
+                                } catch (IOException e) {
+                                    p.sendMessage("something wrong");
+                                    throw new RuntimeException(e);
+                                }
+                            } else {
+                                p.sendMessage("nothing user");
+                            }
+                        }
+                    } else {
+                        if (!isInteger(args[2])) {
+                            p.sendMessage("invalid arg");
+                            return true;
+                        }
+                        config.set("jump.jump_count_" + type, Integer.parseInt(args[2]));
+                        try {
+                            config.save(configFile);
+                            setAllConfig();
+                            jumpReload();
+                            p.sendMessage("count has been set");
+                        } catch (IOException e) {
+                            p.sendMessage("something wrong");
+                            throw new RuntimeException(e);
+                        }
+                    }
+                } else if (args[0].equals("break")) {
+                    if (!Arrays.asList("add", "remove").contains(args[1])) return true;
+                    OfflinePlayer player = getPlayer(args[2]);
+                    if (args[1].equals("add")) {
+                        if (Objects.nonNull(player)) {
+                            if (breakPlayers.contains(player.getUniqueId().toString())) {
+                                p.sendMessage("player exists already");
+                            } else {
+                                breakPlayers.add(player.getUniqueId().toString());
+                                config.set("break.break_players", breakPlayers);
+                                try {
+                                    config.save(configFile);
+                                    setAllConfig();
                                     p.sendMessage("player has been added");
                                 } catch (IOException e) {
                                     p.sendMessage("something wrong");
                                     throw new RuntimeException(e);
                                 }
                             }
-                        }else{
-                            p.sendMessage("nothing user");
                         }
-                    }else if(args[2].equals("remove")){
-                        OfflinePlayer player = getPlayer(args[3]);
-                        if (Objects.nonNull(player) && jumpPlayers.contains(player.getUniqueId().toString())){
-                            jumpPlayers.remove(player.getUniqueId().toString());
-                            config.set("jump.jump_"+type+"_players", jumpPlayers);
+                    } else {
+                        if (Objects.nonNull(player) && breakPlayers.contains(player.getUniqueId().toString())) {
+                            breakPlayers.remove(player.getUniqueId().toString());
+                            config.set("break.break_players", breakPlayers);
                             try {
                                 config.save(configFile);
                                 setAllConfig();
@@ -304,24 +358,58 @@ public final class Rewards extends JavaPlugin implements Listener {
                                 p.sendMessage("something wrong");
                                 throw new RuntimeException(e);
                             }
-                        }else{
+                        } else {
                             p.sendMessage("nothing user");
                         }
                     }
-                }else{
-                    if (!isInteger(args[2])){
-                        p.sendMessage("invalid arg");
-                        return true;
-                    }
-                    config.set("jump.jump_count_"+type, Integer.parseInt(args[2]));
-                    try {
-                        config.save(configFile);
-                        setAllConfig();
-                        jumpReload();
-                        p.sendMessage("count has been set");
-                    } catch (IOException e) {
-                        p.sendMessage("something wrong");
-                        throw new RuntimeException(e);
+                } else if (args[0].equals("breakTree")) {
+                    if (Arrays.asList("add", "remove").contains(args[1])) {
+                        OfflinePlayer player = getPlayer(args[2]);
+                        if (args[1].equals("add")) {
+                            if (Objects.nonNull(player)) {
+                                if (breakTreePlayers.contains(player.getUniqueId().toString())) {
+                                    p.sendMessage("player exists already");
+                                } else {
+                                    breakTreePlayers.add(player.getUniqueId().toString());
+                                    config.set("break_tree.break_tree_players", breakTreePlayers);
+                                    try {
+                                        config.save(configFile);
+                                        setAllConfig();
+                                        p.sendMessage("player has been added");
+                                    } catch (IOException e) {
+                                        p.sendMessage("something wrong");
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            }
+                        } else {
+                            if (Objects.nonNull(player) && breakTreePlayers.contains(player.getUniqueId().toString())) {
+                                breakTreePlayers.remove(player.getUniqueId().toString());
+                                config.set("break_tree.break_tree_players", breakTreePlayers);
+                                try {
+                                    config.save(configFile);
+                                    setAllConfig();
+                                    jumpReload();
+                                    p.sendMessage("remove complete");
+                                } catch (IOException e) {
+                                    p.sendMessage("something wrong");
+                                    throw new RuntimeException(e);
+                                }
+                            } else {
+                                p.sendMessage("nothing user");
+                            }
+                        }
+                    } else if (isInteger(args[1])) {
+                        config.set("break_tree.break_tree_max", Integer.parseInt(args[1]));
+                        try {
+                            config.save(configFile);
+                            setAllConfig();
+                            jumpReload();
+                            p.sendMessage("set complete");
+                        } catch (IOException e) {
+                            p.sendMessage("something wrong");
+                            throw new RuntimeException(e);
+                        }
                     }
                 }
             }
@@ -332,65 +420,69 @@ public final class Rewards extends JavaPlugin implements Listener {
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, Command command, @NotNull String alias, @NotNull String[] args) {
         if (!command.getName().equalsIgnoreCase("rewards")) return super.onTabComplete(sender, command, alias, args);
-        ArrayList<String> playerNames = new ArrayList<>();
-        for (Player player : Bukkit.getServer().getOnlinePlayers()){
-            playerNames.add(player.getDisplayName());
-        }
-        playerNames.add("プレイヤー名");
 
-        if (args.length == 1) {
-            if (args[0].length() == 0) {
-                return Arrays.asList("reload","jump","break","breakTree");
-            } else {
-                if ("reload".startsWith(args[0])) {
-                    return Collections.singletonList("reload");
-                }else if("jump".startsWith(args[0])){
-                    return Collections.singletonList("jump");
-                }else if("break".startsWith(args[0])){
-                    return Collections.singletonList("break");
-                }else if("breakTree".startsWith(args[0])){
-                    return Collections.singletonList("breakTree");
-                }
+        if (sender.isOp()) {
+
+            ArrayList<String> playerNames = new ArrayList<>();
+            for (Player player : Bukkit.getServer().getOnlinePlayers()) {
+                playerNames.add(player.getDisplayName());
             }
-        }
+            playerNames.add("プレイヤー名");
 
-        if (args.length == 2){
-            if (args[0].equals("jump")){
-                if (args[1].length() == 0) {
-                    return Arrays.asList("great","normal");
+            if (args.length == 1) {
+                if (args[0].length() == 0) {
+                    return Arrays.asList("reload", "jump", "break", "breakTree");
                 } else {
-                    if ("great".startsWith(args[1])){
-                        return Collections.singletonList("great");
-                    }else if("normal".startsWith(args[1])){
-                        return Collections.singletonList("normal");
+                    if ("reload".startsWith(args[0])) {
+                        return Collections.singletonList("reload");
+                    } else if ("jump".startsWith(args[0])) {
+                        return Collections.singletonList("jump");
+                    } else if ("break".startsWith(args[0])) {
+                        return Collections.singletonList("break");
+                    } else if ("breakTree".startsWith(args[0])) {
+                        return Collections.singletonList("breakTree");
                     }
                 }
-            }else if(args[0].equals("break")){
-                return playerNames;
-            }else if(args[0].equals("breakTree")){
-                return Arrays.asList("add","set");
             }
-        }
 
-        if (args.length == 3){
-            if (args[0].equals("jump")){
-                if (args[2].length() == 0) {
-                    return Arrays.asList("{count}","add","remove");
-                } else {
+            if (args.length == 2) {
+                if (args[0].equals("jump")) {
+                    if (args[1].length() == 0) {
+                        return Arrays.asList("great", "normal");
+                    } else {
+                        if ("great".startsWith(args[1])) {
+                            return Collections.singletonList("great");
+                        } else if ("normal".startsWith(args[1])) {
+                            return Collections.singletonList("normal");
+                        }
+                    }
+                } else if (args[0].equals("break")) {
                     return playerNames;
-                }
-            }else if (args[0].equals("breakTree")){
-                if (args[1].equals("add")){
-                    return playerNames;
-                }else{
-                    return Collections.singletonList("{max block}");
+                } else if (args[0].equals("breakTree")) {
+                    return Arrays.asList("add", "remove", "set");
                 }
             }
-        }
 
-        if (args.length == 4){
-            if (args[0].equals("jump")){
-                return playerNames;
+            if (args.length == 3) {
+                if (args[0].equals("jump")) {
+                    if (args[2].length() == 0) {
+                        return Arrays.asList("{count}", "add", "remove");
+                    } else {
+                        return playerNames;
+                    }
+                } else if (args[0].equals("breakTree")) {
+                    if (args[1].equals("add") || args[1].equals("remove")) {
+                        return playerNames;
+                    } else if (args[1].equals("set")) {
+                        return Collections.singletonList("{max block}");
+                    }
+                }
+            }
+
+            if (args.length == 4) {
+                if (args[0].equals("jump")) {
+                    return playerNames;
+                }
             }
         }
 
